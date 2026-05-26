@@ -81,7 +81,8 @@ FamilyHub — Семейный органайзер
 | **Category** | id, name, icon (справочник категорий: food, utilities, entertainment и т.д.)              |
 
 ---
-
+```markdown
+```plaintext
 🗃 ER-диаграмма
 
 ┌─────────────┐                    ┌─────────────┐
