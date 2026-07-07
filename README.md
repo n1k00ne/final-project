@@ -261,3 +261,100 @@ final-project/
 - `npm install` - устанавливаем зависимости
 - `npm run start` - запускаем проект
 
+1) удалить Статистика, Управление семьей - не усложняем - упрощаем
+2) подергать сервер раскидать логи по серверу чтобы понять че прилетает откуда и куда
+
+1. Проверка состояния сервера (health check)
+bash
+curl http://localhost:5000/api/health
+Ожидаемый ответ: { "status": "OK", "timestamp": "..." }
+
+2. Работа с задачами (/api/tasks)
+Получить все задачи
+
+bash
+curl http://localhost:5000/api/tasks
+Получить задачу по ID (например, 1)
+
+bash
+curl http://localhost:5000/api/tasks/1
+Создать новую задачу (POST) – передаём JSON-объект
+
+bash
+curl -X POST http://localhost:5000/api/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Купить хлеб",
+    "description": "Купить батон в пекарне",
+    "status": "work",
+    "assigneeId": "u2",
+    "creatorId": "u1",
+    "familyId": "f1",
+    "deadline": "2026-07-15"
+  }'
+Обновить задачу (PUT) – заменяем поля
+
+bash
+curl -X PUT http://localhost:5000/api/tasks/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "done"
+  }'
+Удалить задачу (DELETE)
+
+bash
+curl -X DELETE http://localhost:5000/api/tasks/1
+3. Работа с расходами (/api/costs)
+Получить все расходы
+
+bash
+curl http://localhost:5000/api/costs
+Получить расход по ID
+
+bash
+curl http://localhost:5000/api/costs/c1
+Создать расход (POST)
+
+bash
+curl -X POST http://localhost:5000/api/costs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 1500,
+    "categoryId": "1",
+    "note": "Обед в кафе",
+    "date": "2026-07-08",
+    "userId": "u3",
+    "familyId": "f1",
+    "place": "Кафе у дома",
+    "paymentMethod": "cash",
+    "isShared": false
+  }'
+Обновить расход (PUT)
+
+bash
+curl -X PUT http://localhost:5000/api/costs/c1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 3800,
+    "note": "Покупки в супермаркете (исправлено)"
+  }'
+Удалить расход (DELETE)
+
+bash
+curl -X DELETE http://localhost:5000/api/costs/c2
+4. Категории (/api/categories) – только GET
+Получить список всех категорий
+
+bash
+curl http://localhost:5000/api/categories
+5. Пользователи (/api/users) – только GET
+Получить всех пользователей
+
+bash
+curl http://localhost:5000/api/users
+Получить пользователя по ID (например, u1)
+
+bash
+curl http://localhost:5000/api/users/u1
+
+3) получать мокДанные с сервера а не с фронта

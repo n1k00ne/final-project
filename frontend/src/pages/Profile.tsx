@@ -168,17 +168,7 @@ const Profile: React.FC = () => {
           <FaShieldAlt />
           <span>Ваша роль: <strong>Глава семьи (Администратор)</strong></span>
         </div>
-        <p className="role-description">Вы можете добавлять/удалять участников и управлять общими настройками</p>
-      </div>
-
-      <div className="invite-section">
-        <button className="invite-btn">
-          <FaQrcode /> Пригласить члена семьи
-        </button>
-        <div className="invite-code">
-          <span>Код приглашения: <strong>FAM-2026-X7K9</strong></span>
-          <button className="copy-btn">Копировать</button>
-        </div>
+        <p className="role-description">Вы можете добавлять/удалять участников и управлять общими настройками (TBD)</p>
       </div>
 
       <div className="family-members">

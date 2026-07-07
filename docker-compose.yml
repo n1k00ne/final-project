@@ -1,0 +1,28 @@
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - family-network
+
+  backend:
+    build:
+      context: .
+      dockerfile:./backend/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+    networks:
+      - family-network
+
+networks:
+  family-network:
+    driver: bridge
