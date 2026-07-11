@@ -84,7 +84,6 @@ FamilyHub — это прозрачная общая касса. Вы видит
 
 ---
 ```markdown
-```plaintext
 🗃 ER-диаграмма
 
 ┌─────────────┐                    ┌─────────────┐
@@ -361,6 +360,7 @@ curl http://localhost:5000/api/users/u1
 
 📊 РЕЗУЛЬТАТЫ ТЕСТИРОВАНИЯ
 
+```markdown
 ✅ 1. Health Check - РАБОТАЕТ
 json
 {"status":"OK","timestamp":"2026-07-09T11:58:22.516Z"}
@@ -378,7 +378,8 @@ DELETE	/api/tasks/1	✅ Задача удалена (204 No Content)
 ________________________________________
 ✅ 3. Расходы (/api/costs) - ВСЕ РАБОТАЕТ
 Метод	Эндпоинт	Результат
-GET	/api/costs	✅ Получен список расходов
+GET	/api/costs	✅ Получен список расходов  
+
 GET	/api/costs/c2	✅ Получен расход по ID
 GET	/api/costs/c99	✅ 404 - "Cost not found"
 POST	/api/costs	✅ Создан расход с ID 1783601333204
@@ -398,7 +399,12 @@ ________________________________________
 ✅ 5. Пользователи (/api/users) - РАБОТАЕТ
 Метод	Эндпоинт	Результат
 GET	/api/users	✅ Получен список пользователей
+
 GET	/api/users/u1	✅ Алексей (admin)
+
 GET	/api/users/u2	✅ Мария (member)
+
 GET	/api/users/u3	✅ Сергей (member)
+
 GET	/api/users/u99	✅ 404 - "User not found"
+```
