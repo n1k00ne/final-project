@@ -14,22 +14,22 @@ import {
 
 const Profile: React.FC = () => {
   const [activeTab, setActiveTab] = useState('personal');
-  const [editing, setEditing] = useState(false);
-  
+    
   // Состояния для личных данных
   const [profileData, setProfileData] = useState({
-    firstName: 'Алексей',
-    lastName: 'Иванов',
-    email: 'aleksey@familyhub.ru',
-    phone: '+7 (999) 123-45-67',
-    birthday: '15.08.1985',
-    familyAnniversary: '01.06.2020',
-    status: '🏠 Дома',
-    themeColor: '#3498db',
-    currency: 'RUB',
-    dateFormat: 'DD.MM.YYYY',
-    weekStart: 'monday'
-  });
+  firstName: 'Алексей',
+  lastName: 'Иванов',
+  email: 'aleksey@familyhub.ru',
+  phone: '+7 (999) 123-45-67',
+  birthday: '15.08.1985',
+  familyAnniversary: '01.06.2020',
+  status: '🏠 Дома',
+  themeColor: '#3498db',
+  currency: 'RUB',
+  dateFormat: 'DD.MM.YYYY',
+  weekStart: 'monday',
+  notes: 'Пин-код от домофона: 1234\nРазмер обуви: 42' // ✅ Добавлено поле notes
+});
 
   // Состояние для финансов
   const [wallets] = useState([
@@ -61,13 +61,15 @@ const Profile: React.FC = () => {
     { date: '20.06.2026, 09:00', ip: '10.0.0.5', device: 'iPhone 15 Pro', browser: 'Safari' }
   ];
 
-  const renderPersonalData = () => (
+  const renderPersonalData = () => {
+  const handleStatusChange = (newStatus: string) => {
+    setProfileData({...profileData, status: newStatus});
+  };
+
+  return (
     <div className="profile-section">
       <div className="section-header">
         <h2>Личные данные</h2>
-        <button className="edit-btn" onClick={() => setEditing(!editing)}>
-          {editing ? 'Сохранить' : 'Редактировать'}
-        </button>
       </div>
 
       <div className="profile-avatar-section">
@@ -78,15 +80,34 @@ const Profile: React.FC = () => {
           <div className="status-badge">
             <span>{profileData.status}</span>
           </div>
-          <button className="change-avatar-btn">Изменить</button>
         </div>
         <div className="status-selector">
           <span>Статус:</span>
           <div className="status-options">
-            <button className="status-option active" data-status="🏠 Дома">🏠</button>
-            <button className="status-option" data-status="🏢 На работе">🏢</button>
-            <button className="status-option" data-status="🚗 В дороге">🚗</button>
-            <button className="status-option" data-status="🏖️ В отпуске">🏖️</button>
+            <button 
+              className={`status-option ${profileData.status === '🏠 Дома' ? 'active' : ''}`}
+              onClick={() => handleStatusChange('🏠 Дома')}
+            >
+              🏠
+            </button>
+            <button 
+              className={`status-option ${profileData.status === '🏢 Работа' ? 'active' : ''}`}
+              onClick={() => handleStatusChange('🏢 Работа')}
+            >
+              🏢
+            </button>
+            <button 
+              className={`status-option ${profileData.status === '🚗 Мчусь' ? 'active' : ''}`}
+              onClick={() => handleStatusChange('🚗 Мчусь')}
+            >
+              🚗
+            </button>
+            <button 
+              className={`status-option ${profileData.status === '🏖️ Отпуск' ? 'active' : ''}`}
+              onClick={() => handleStatusChange('🏖️ Отпуск')}
+            >
+              🏖️
+            </button>
           </div>
         </div>
       </div>
@@ -97,7 +118,6 @@ const Profile: React.FC = () => {
           <input 
             type="text" 
             value={profileData.firstName}
-            disabled={!editing}
             onChange={(e) => setProfileData({...profileData, firstName: e.target.value})}
           />
         </div>
@@ -106,7 +126,6 @@ const Profile: React.FC = () => {
           <input 
             type="text" 
             value={profileData.lastName}
-            disabled={!editing}
             onChange={(e) => setProfileData({...profileData, lastName: e.target.value})}
           />
         </div>
@@ -115,7 +134,6 @@ const Profile: React.FC = () => {
           <input 
             type="email" 
             value={profileData.email}
-            disabled={!editing}
             onChange={(e) => setProfileData({...profileData, email: e.target.value})}
           />
         </div>
@@ -124,7 +142,6 @@ const Profile: React.FC = () => {
           <input 
             type="tel" 
             value={profileData.phone}
-            disabled={!editing}
             onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
           />
         </div>
@@ -133,7 +150,6 @@ const Profile: React.FC = () => {
           <input 
             type="text" 
             value={profileData.birthday}
-            disabled={!editing}
             onChange={(e) => setProfileData({...profileData, birthday: e.target.value})}
           />
         </div>
@@ -142,7 +158,6 @@ const Profile: React.FC = () => {
           <input 
             type="text" 
             value={profileData.familyAnniversary}
-            disabled={!editing}
             onChange={(e) => setProfileData({...profileData, familyAnniversary: e.target.value})}
           />
         </div>
@@ -153,11 +168,13 @@ const Profile: React.FC = () => {
         <textarea 
           placeholder="Пин-коды, размеры, важные даты..."
           rows={4}
-          disabled={!editing}
+          value={profileData.notes || ''}
+          onChange={(e) => setProfileData({...profileData, notes: e.target.value})}
         />
       </div>
     </div>
   );
+};
 
   const renderFamilyModule = () => (
     <div className="profile-section">

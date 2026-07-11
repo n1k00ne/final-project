@@ -1,31 +1,11 @@
-// src/pages/Tasks.tsx
 import React, { useState, useMemo, useEffect } from 'react';
 import { FaSearch, FaPlus, FaFilter, FaTimes } from 'react-icons/fa';
 import { BsCheckCircle, BsCircle, BsClock, BsExclamationTriangle } from 'react-icons/bs';
 import { MdPriorityHigh } from 'react-icons/md';
 import { useLocation } from 'react-router-dom';
 
-// Типы для задач
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'work' | 'done' | 'archived';
-  priority: 'high' | 'medium' | 'low';
-  assigneeId?: string;
-  creatorId: string;
-  category: 'home' | 'kids' | 'work' | 'finance' | 'repair' | 'health';
-  deadline?: string;
-  createdAt: string;
-  isRecurring?: boolean;
-  recurringType?: 'daily' | 'weekly' | 'monthly';
-}
-
-interface Member {
-  id: string;
-  name: string;
-  avatar?: string;
-}
+// Импортируем API-клиент и типы
+import { tasksApi, usersApi, Task, User } from '../api/client';
 
 // Хук для сохранения состояния в localStorage
 function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => void] {
@@ -54,98 +34,19 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => voi
 const Tasks: React.FC = () => {
   const location = useLocation();
   
-  // Флаг для отслеживания, была ли страница уже загружена в этой сессии
-  const [isInitialized, setIsInitialized] = useState(() => {
-    return sessionStorage.getItem('tasks_initialized') === 'true';
-  });
+  // ============================================
+  // 1. СОСТОЯНИЯ ДЛЯ ДАННЫХ С СЕРВЕРА
+  // ============================================
+  
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Моковые данные для демонстрации
-  const [tasks] = useState<Task[]>([
-    {
-      id: '1',
-      title: 'Купить продукты',
-      description: 'Молоко, хлеб, яйца, масло',
-      status: 'work',
-      priority: 'high',
-      assigneeId: 'member1',
-      creatorId: 'admin',
-      category: 'home',
-      deadline: '2026-07-03',
-      createdAt: '2026-07-01',
-      isRecurring: true,
-      recurringType: 'daily'
-    },
-    {
-      id: '2',
-      title: 'Забрать детей из школы',
-      description: 'Не забыть про кружок рисования',
-      status: 'work',
-      priority: 'high',
-      assigneeId: 'member2',
-      creatorId: 'admin',
-      category: 'kids',
-      deadline: '2026-07-03',
-      createdAt: '2026-07-02'
-    },
-    {
-      id: '3',
-      title: 'Подготовить отчет по работе',
-      description: 'Квартальный отчет для начальника',
-      status: 'work',
-      priority: 'medium',
-      assigneeId: 'member1',
-      creatorId: 'member1',
-      category: 'work',
-      deadline: '2026-07-05',
-      createdAt: '2026-06-28'
-    },
-    {
-      id: '4',
-      title: 'Заплатить за коммуналку',
-      description: 'Счет за июнь',
-      status: 'done',
-      priority: 'medium',
-      assigneeId: 'admin',
-      creatorId: 'admin',
-      category: 'finance',
-      deadline: '2026-07-01',
-      createdAt: '2026-06-25'
-    },
-    {
-      id: '5',
-      title: 'Записаться к врачу',
-      description: 'Плановый осмотр',
-      status: 'work',
-      priority: 'low',
-      assigneeId: 'member2',
-      creatorId: 'member2',
-      category: 'health',
-      deadline: '2026-07-10',
-      createdAt: '2026-07-02'
-    },
-    {
-      id: '6',
-      title: 'Починить кран на кухне',
-      description: 'Течет вода',
-      status: 'archived',
-      priority: 'high',
-      assigneeId: 'member1',
-      creatorId: 'admin',
-      category: 'repair',
-      deadline: '2026-06-30',
-      createdAt: '2026-06-20'
-    }
-  ]);
-
-  const [members] = useState<Member[]>([
-    { id: 'admin', name: 'Алексей' },
-    { id: 'member1', name: 'Мама' },
-    { id: 'member2', name: 'Папа' },
-    { id: 'member3', name: 'Дочь' },
-    { id: 'member4', name: 'Сын' }
-  ]);
-
-  // Состояния фильтров с сохранением в localStorage
+  // ============================================
+  // 2. СОСТОЯНИЯ ФИЛЬТРОВ (из localStorage)
+  // ============================================
+  
   const [searchQuery, setSearchQuery] = useLocalStorage('tasks_searchQuery', '');
   const [selectedTab, setSelectedTab] = useLocalStorage<'all' | 'today' | 'important' | 'week' | 'my'>('tasks_selectedTab', 'all');
   const [selectedAssignee, setSelectedAssignee] = useLocalStorage('tasks_selectedAssignee', 'all');
@@ -160,168 +61,148 @@ const Tasks: React.FC = () => {
   const [selectedCreator, setSelectedCreator] = useLocalStorage('tasks_selectedCreator', 'all');
   const [showRecurringOnly, setShowRecurringOnly] = useLocalStorage('tasks_showRecurringOnly', false);
 
-  // Функция для очистки фильтров
-  const clearFilters = () => {
-    const filterKeys = [
-      'tasks_searchQuery',
-      'tasks_selectedTab',
-      'tasks_selectedAssignee',
-      'tasks_selectedStatus',
-      'tasks_selectedCategory',
-      'tasks_showAdvancedFilters',
-      'tasks_sortBy',
-      'tasks_sortOrder',
-      'tasks_dateRange',
-      'tasks_selectedCreator',
-      'tasks_showRecurringOnly'
-    ];
-    
-    filterKeys.forEach(key => {
-      localStorage.removeItem(key);
-    });
-  };
+  // Флаг для отслеживания инициализации
+  const [isInitialized, setIsInitialized] = useState(() => {
+    return sessionStorage.getItem('tasks_initialized') === 'true';
+  });
 
-  // При первом заходе на страницу в сессии, очищаем фильтры
+  // ============================================
+  // 3. ЗАГРУЗКА ДАННЫХ С СЕРВЕРА
+  // ============================================
+  
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Загружаем задачи и пользователей параллельно
+        const [tasksData, usersData] = await Promise.all([
+          tasksApi.getAll(),
+          usersApi.getAll(),
+        ]);
+        
+        setTasks(tasksData);
+        setUsers(usersData);
+        console.log('✅ Задачи загружены:', tasksData.length);
+        console.log('✅ Пользователи загружены:', usersData.length);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Ошибка загрузки данных';
+        setError(errorMessage);
+        console.error('❌ Ошибка загрузки:', errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []); // Пустой массив = загрузка при монтировании
+
+  // ============================================
+  // 4. ОЧИСТКА ФИЛЬТРОВ ПРИ ПЕРВОМ ЗАХОДЕ
+  // ============================================
+  
   useEffect(() => {
     if (!isInitialized) {
-      // Это первый заход на страницу в этой сессии
-      clearFilters();
+      const filterKeys = [
+        'tasks_searchQuery',
+        'tasks_selectedTab',
+        'tasks_selectedAssignee',
+        'tasks_selectedStatus',
+        'tasks_selectedCategory',
+        'tasks_showAdvancedFilters',
+        'tasks_sortBy',
+        'tasks_sortOrder',
+        'tasks_dateRange',
+        'tasks_selectedCreator',
+        'tasks_showRecurringOnly'
+      ];
+      
+      filterKeys.forEach(key => {
+        localStorage.removeItem(key);
+      });
+      
       sessionStorage.setItem('tasks_initialized', 'true');
       setIsInitialized(true);
     }
   }, [isInitialized]);
 
-  // Сбрасываем фильтры при переходе на другую страницу или закрытии вкладки
+  // Очистка при уходе со страницы
   useEffect(() => {
-    // Сохраняем текущий путь
     const currentPath = location.pathname;
 
-    // Слушаем событие beforeunload (закрытие вкладки/браузера)
     const handleBeforeUnload = () => {
-      clearFilters();
+      const filterKeys = [
+        'tasks_searchQuery',
+        'tasks_selectedTab',
+        'tasks_selectedAssignee',
+        'tasks_selectedStatus',
+        'tasks_selectedCategory',
+        'tasks_showAdvancedFilters',
+        'tasks_sortBy',
+        'tasks_sortOrder',
+        'tasks_dateRange',
+        'tasks_selectedCreator',
+        'tasks_showRecurringOnly'
+      ];
+      
+      filterKeys.forEach(key => {
+        localStorage.removeItem(key);
+      });
       sessionStorage.removeItem('tasks_initialized');
       setIsInitialized(false);
     };
 
-    // Добавляем слушатель
     window.addEventListener('beforeunload', handleBeforeUnload);
     
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      // Если мы уходим со страницы задач (размонтирование)
       if (currentPath === '/tasks' || currentPath.startsWith('/tasks/')) {
-        clearFilters();
+        const filterKeys = [
+          'tasks_searchQuery',
+          'tasks_selectedTab',
+          'tasks_selectedAssignee',
+          'tasks_selectedStatus',
+          'tasks_selectedCategory',
+          'tasks_showAdvancedFilters',
+          'tasks_sortBy',
+          'tasks_sortOrder',
+          'tasks_dateRange',
+          'tasks_selectedCreator',
+          'tasks_showRecurringOnly'
+        ];
+        
+        filterKeys.forEach(key => {
+          localStorage.removeItem(key);
+        });
         sessionStorage.removeItem('tasks_initialized');
         setIsInitialized(false);
       }
     };
   }, [location.pathname]);
 
-  // Подсчет просроченных задач для каждого члена семьи
-  const overdueCounts = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const counts: Record<string, number> = {};
-    
-    members.forEach(member => {
-      counts[member.id] = tasks.filter(task => 
-        task.assigneeId === member.id &&
-        task.status === 'work' &&
-        task.deadline &&
-        task.deadline < today
-      ).length;
-    });
-    
-    return counts;
-  }, [tasks, members]);
-
-  // Фильтрация задач
-  const filteredTasks = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const weekAhead = new Date();
-    weekAhead.setDate(weekAhead.getDate() + 7);
-    const weekAheadStr = weekAhead.toISOString().split('T')[0];
-
-    return tasks.filter(task => {
-      // Поиск
-      if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !(task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))) {
-        return false;
-      }
-
-      // Быстрые вкладки
-      if (selectedTab === 'today') {
-        const isOverdue = task.deadline && task.deadline < today;
-        if (task.deadline !== today && !isOverdue) return false;
-        if (task.status === 'done') return false;
-      }
-      if (selectedTab === 'important' && task.priority !== 'high') return false;
-      if (selectedTab === 'week') {
-        if (!task.deadline || task.deadline > weekAheadStr || task.deadline < today) return false;
-        if (task.status === 'done') return false;
-      }
-      if (selectedTab === 'my' && task.assigneeId !== 'admin') return false;
-
-      // Статус
-      if (selectedStatus === 'overdue') {
-        if (!task.deadline || task.deadline >= today || task.status === 'done') return false;
-      } else if (selectedStatus !== 'all' && task.status !== selectedStatus) {
-        return false;
-      }
-
-      // Исполнитель
-      if (selectedAssignee !== 'all' && task.assigneeId !== selectedAssignee) return false;
-
-      // Категория
-      if (selectedCategory !== 'all' && task.category !== selectedCategory) return false;
-
-      // Расширенные фильтры
-      if (dateRange.from && task.deadline && task.deadline < dateRange.from) return false;
-      if (dateRange.to && task.deadline && task.deadline > dateRange.to) return false;
-      if (selectedCreator !== 'all' && task.creatorId !== selectedCreator) return false;
-      if (showRecurringOnly && !task.isRecurring) return false;
-
-      return true;
-    });
-  }, [tasks, searchQuery, selectedTab, selectedAssignee, selectedStatus, selectedCategory, 
-      dateRange, selectedCreator, showRecurringOnly]);
-
-  // Сортировка
-  const sortedTasks = useMemo(() => {
-    const sorted = [...filteredTasks];
-    const order = sortOrder === 'asc' ? 1 : -1;
-    
-    switch (sortBy) {
-      case 'deadline':
-        sorted.sort((a, b) => {
-          if (!a.deadline && !b.deadline) return 0;
-          if (!a.deadline) return 1;
-          if (!b.deadline) return -1;
-          return (a.deadline < b.deadline ? -1 : 1) * order;
-        });
-        break;
-      case 'priority':
-        const priorityMap = { high: 3, medium: 2, low: 1 };
-        sorted.sort((a, b) => (priorityMap[a.priority] - priorityMap[b.priority]) * order);
-        break;
-      case 'assignee':
-        sorted.sort((a, b) => {
-          const nameA = members.find(m => m.id === a.assigneeId)?.name || '';
-          const nameB = members.find(m => m.id === b.assigneeId)?.name || '';
-          return nameA.localeCompare(nameB) * order;
-        });
-        break;
-      case 'category':
-        sorted.sort((a, b) => a.category.localeCompare(b.category) * order);
-        break;
-    }
-    
-    return sorted;
-  }, [filteredTasks, sortBy, sortOrder, members]);
-
-  // Получение информации о члене семьи
+  // ============================================
+  // 5. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+  // ============================================
+  
+  // Получение имени пользователя
   const getMemberName = (id?: string) => {
     if (!id) return 'Не назначен';
-    return members.find(m => m.id === id)?.name || 'Неизвестный';
+    const user = users.find(u => u.id === id);
+    return user?.name || 'Неизвестный';
+  };
+
+  // Получение эмодзи для категории
+  const getCategoryEmoji = (category: string) => {
+    const map: Record<string, string> = {
+      home: '🏠',
+      kids: '👶',
+      work: '💼',
+      finance: '💰',
+      repair: '🔧',
+      health: '🏥'
+    };
+    return map[category] || '📌';
   };
 
   // Получение цвета статуса
@@ -346,20 +227,131 @@ const Tasks: React.FC = () => {
     }
   };
 
-  // Получение эмодзи для категории
-  const getCategoryEmoji = (category: string) => {
-    const map: Record<string, string> = {
-      home: '🏠',
-      kids: '👶',
-      work: '💼',
-      finance: '💰',
-      repair: '🔧',
-      health: '🏥'
-    };
-    return map[category] || '📌';
-  };
+  // ============================================
+  // 6. ПОДСЧЁТ ПРОСРОЧЕННЫХ ЗАДАЧ
+  // ============================================
+  
+  const overdueCounts = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const counts: Record<string, number> = {};
+    
+    users.forEach(user => {
+      counts[user.id] = tasks.filter(task => 
+        task.assigneeId === user.id &&
+        task.status === 'work' &&
+        task.deadline &&
+        task.deadline < today
+      ).length;
+    });
+    
+    return counts;
+  }, [tasks, users]);
 
-  // Обработчик смены сортировки
+  // ============================================
+  // 7. ФИЛЬТРАЦИЯ ЗАДАЧ
+  // ============================================
+  
+  const filteredTasks = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const weekAhead = new Date();
+    weekAhead.setDate(weekAhead.getDate() + 7);
+    const weekAheadStr = weekAhead.toISOString().split('T')[0];
+
+    return tasks.filter(task => {
+      // Поиск
+      if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
+          !(task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))) {
+        return false;
+      }
+
+      // Быстрые вкладки
+      if (selectedTab === 'today') {
+        const isOverdue = task.deadline && task.deadline < today;
+        if (task.deadline !== today && !isOverdue) return false;
+        if (task.status === 'done') return false;
+      }
+      if (selectedTab === 'important' && (task.priority || 'low') !== 'high') return false;
+      if (selectedTab === 'week') {
+        if (!task.deadline || task.deadline > weekAheadStr || task.deadline < today) return false;
+        if (task.status === 'done') return false;
+      }
+      if (selectedTab === 'my' && task.assigneeId !== 'u1') return false;
+
+      // Статус
+      if (selectedStatus === 'overdue') {
+        if (!task.deadline || task.deadline >= today || task.status === 'done') return false;
+      } else if (selectedStatus !== 'all' && task.status !== selectedStatus) {
+        return false;
+      }
+
+      // Исполнитель
+      if (selectedAssignee !== 'all' && task.assigneeId !== selectedAssignee) return false;
+
+      // Категория
+      if (selectedCategory !== 'all' && (task.category || '') !== selectedCategory) return false;
+
+      // Расширенные фильтры
+      if (dateRange.from && task.deadline && task.deadline < dateRange.from) return false;
+      if (dateRange.to && task.deadline && task.deadline > dateRange.to) return false;
+      if (selectedCreator !== 'all' && task.creatorId !== selectedCreator) return false;
+      if (showRecurringOnly && !task.isRecurring) return false;
+
+      return true;
+    });
+  }, [tasks, searchQuery, selectedTab, selectedAssignee, selectedStatus, selectedCategory, 
+      dateRange, selectedCreator, showRecurringOnly]);
+
+  // ============================================
+  // 8. СОРТИРОВКА ЗАДАЧ
+  // ============================================
+  
+  const sortedTasks = useMemo(() => {
+  const sorted = [...filteredTasks];
+  const order = sortOrder === 'asc' ? 1 : -1;
+  
+  switch (sortBy) {
+    case 'deadline':
+      sorted.sort((a, b) => {
+        if (!a.deadline && !b.deadline) return 0;
+        if (!a.deadline) return 1;
+        if (!b.deadline) return -1;
+        return (a.deadline < b.deadline ? -1 : 1) * order;
+      });
+      break;
+      
+    case 'priority':
+      const priorityMap = { high: 3, medium: 2, low: 1 };
+      sorted.sort((a, b) => {
+        const aPriority = a.priority || 'low';
+        const bPriority = b.priority || 'low';
+        return (priorityMap[aPriority] - priorityMap[bPriority]) * order;
+      });
+      break;
+      
+    case 'assignee':
+      sorted.sort((a, b) => {
+        const nameA = getMemberName(a.assigneeId);
+        const nameB = getMemberName(b.assigneeId);
+        return nameA.localeCompare(nameB) * order;
+      });
+      break;
+      
+    case 'category':
+      sorted.sort((a, b) => {
+        const aCat = a.category || '';
+        const bCat = b.category || '';
+        return aCat.localeCompare(bCat) * order;
+      });
+      break;
+  }
+  
+  return sorted;
+}, [filteredTasks, sortBy, sortOrder]);
+
+  // ============================================
+  // 9. ОБРАБОТЧИКИ
+  // ============================================
+  
   const handleSortChange = (newSortBy: 'deadline' | 'priority' | 'assignee' | 'category') => {
     if (sortBy === newSortBy) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -369,7 +361,6 @@ const Tasks: React.FC = () => {
     }
   };
 
-  // Сброс всех фильтров
   const resetFilters = () => {
     setSearchQuery('');
     setSelectedTab('all');
@@ -382,8 +373,44 @@ const Tasks: React.FC = () => {
     setShowAdvancedFilters(false);
   };
 
+  // ============================================
+  // 10. ОТОБРАЖЕНИЕ ЗАГРУЗКИ
+  // ============================================
+  
+  if (loading) {
+    return (
+      <div className="tasks-page">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Загрузка задач...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================
+  // 11. ОТОБРАЖЕНИЕ ОШИБКИ
+  // ============================================
+  
+  if (error) {
+    return (
+      <div className="tasks-page">
+        <div className="error-container">
+          <h2>⚠️ Ошибка загрузки</h2>
+          <p>{error}</p>
+          <button onClick={() => window.location.reload()}>Попробовать снова</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================
+  // 12. ОСНОВНОЙ РЕНДЕР
+  // ============================================
+  
   return (
     <div className="tasks-page">
+      {/* Заголовок */}
       <div className="tasks-header">
         <div className="tasks-title-section">
           <h1>Задачи</h1>
@@ -396,9 +423,12 @@ const Tasks: React.FC = () => {
               <BsCheckCircle className="stat-icon" style={{ color: '#27ae60' }} />
               Выполнено: {tasks.filter(t => t.status === 'done').length}
             </span>
+            <span className="stat-item">
+              Всего: {tasks.length}
+            </span>
           </div>
         </div>
-        <button className="add-task-btn">
+        <button className="add-task-btn" onClick={() => alert('Открыть форму создания задачи')}>
           <FaPlus /> Новая задача
         </button>
       </div>
@@ -411,7 +441,7 @@ const Tasks: React.FC = () => {
             {Object.entries(overdueCounts)
               .filter(([_, count]) => count > 0)
               .map(([id, count]) => {
-                const name = members.find(m => m.id === id)?.name || '';
+                const name = getMemberName(id);
                 return `У ${name} просрочено ${count} задач`;
               })
               .join(', ')}
@@ -425,7 +455,7 @@ const Tasks: React.FC = () => {
           <FaSearch className="search-icon" />
           <input
             type="text"
-            placeholder="Найти задачу, продукт или члена семьи..."
+            placeholder="Найти задачу..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -462,20 +492,18 @@ const Tasks: React.FC = () => {
 
       {/* Основные фильтры */}
       <div className="main-filters">
-        {/* Исполнитель */}
         <select 
           value={selectedAssignee} 
           onChange={(e) => setSelectedAssignee(e.target.value)}
           className="filter-select"
         >
           <option value="all">👥 Все исполнители</option>
-          <option value="admin">👤 Я</option>
-          {members.filter(m => m.id !== 'admin').map(m => (
-            <option key={m.id} value={m.id}>👤 {m.name}</option>
+          <option value="u1">👤 Я (Алексей)</option>
+          {users.filter(u => u.id !== 'u1').map(u => (
+            <option key={u.id} value={u.id}>👤 {u.name}</option>
           ))}
         </select>
 
-        {/* Статус */}
         <div className="status-filters">
           <button
             className={`status-btn ${selectedStatus === 'all' ? 'active' : ''}`}
@@ -503,7 +531,6 @@ const Tasks: React.FC = () => {
           </button>
         </div>
 
-        {/* Категории */}
         <div className="category-filters">
           <button
             className={`category-btn ${selectedCategory === 'all' ? 'active' : ''}`}
@@ -558,8 +585,8 @@ const Tasks: React.FC = () => {
                 className="filter-select"
               >
                 <option value="all">Все авторы</option>
-                {members.map(m => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
               </select>
             </div>
@@ -581,7 +608,7 @@ const Tasks: React.FC = () => {
         </div>
       )}
 
-      {/* Сортировка и список задач */}
+      {/* Сортировка */}
       <div className="tasks-list-header">
         <div className="sort-controls">
           <span className="sort-label">Сортировка:</span>
@@ -638,7 +665,7 @@ const Tasks: React.FC = () => {
                     {task.isRecurring && <span className="recurring-badge">🔄</span>}
                   </h3>
                   <span className="task-category">
-                    {getCategoryEmoji(task.category)} {task.category}
+                    {getCategoryEmoji(task.category || '')} {task.category || 'Без категории'}
                   </span>
                 </div>
                 
@@ -681,6 +708,59 @@ const Tasks: React.FC = () => {
           ))
         )}
       </div>
+
+      {/* Добавляем стили для загрузки и ошибок */}
+      <style>{`
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 400px;
+          gap: 1rem;
+        }
+        
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid #e2e8f0;
+          border-top: 4px solid #3498db;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        .error-container {
+          text-align: center;
+          padding: 3rem;
+          background: #fef5f5;
+          border-radius: 8px;
+          border: 1px solid #fde8e8;
+        }
+        
+        .error-container h2 {
+          color: #e74c3c;
+          margin-bottom: 1rem;
+        }
+        
+        .error-container button {
+          margin-top: 1rem;
+          padding: 0.5rem 1.5rem;
+          background: #3498db;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+        }
+        
+        .error-container button:hover {
+          background: #2980b9;
+        }
+      `}</style>
     </div>
   );
 };

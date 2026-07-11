@@ -1,33 +1,29 @@
 import React, { useState } from 'react';
-import { Task } from '../../types';
-import { USERS } from '../../mockData';
+import { Task } from '../../api/client';
 import { FaCheckCircle, FaRegCircle } from 'react-icons/fa';
 
 interface TaskSummaryProps {
   tasks: Task[];
-  onToggleTask?: (taskId: string) => void;
 }
 
-const TaskSummary: React.FC<TaskSummaryProps> = ({ tasks, onToggleTask }) => {
-  const [localTasks, setLocalTasks] = useState(tasks);
+const TaskSummary: React.FC<TaskSummaryProps> = ({ tasks }) => {
+  const [localTasks] = useState(tasks);
 
   const total = localTasks.length;
   const done = localTasks.filter(t => t.status === 'done').length;
   const progress = total === 0 ? 0 : Math.round((done / total) * 100);
 
-  const handleToggle = (taskId: string) => {
-    // В реальном приложении вызвали бы API, здесь просто меняем статус локально
-    setLocalTasks(prev =>
-      prev.map(task =>
-        task.id === taskId
-          ? { ...task, status: task.status === 'done' ? 'work' : 'done' }
-          : task
-      )
-    );
-    if (onToggleTask) onToggleTask(taskId);
+  // Простой маппинг пользователей (можно расширить)
+  const getAssigneeName = (id?: string) => {
+    if (!id) return 'Не назначен';
+    const names: Record<string, string> = {
+      u1: 'Алексей',
+      u2: 'Мария',
+      u3: 'Сергей',
+    };
+    return names[id] || id;
   };
 
-  // Сортируем: сначала невыполненные, потом по дедлайну
   const sorted = [...localTasks].sort((a, b) => {
     if (a.status === 'done' && b.status !== 'done') return 1;
     if (a.status !== 'done' && b.status === 'done') return -1;
@@ -45,15 +41,14 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ tasks, onToggleTask }) => {
 
       <ul className="task-list">
         {sorted.slice(0, 5).map(task => {
-          const assignee = USERS[task.assigneeId as keyof typeof USERS];
           const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== 'done';
           return (
             <li key={task.id} className={`task-item ${task.status === 'done' ? 'done' : ''} ${isOverdue ? 'overdue' : ''}`}>
-              <button className="task-toggle" onClick={() => handleToggle(task.id)}>
+              <span className="task-toggle">
                 {task.status === 'done' ? <FaCheckCircle color="#27ae60" /> : <FaRegCircle color="#bdc3c7" />}
-              </button>
+              </span>
               <span className="task-title">{task.title}</span>
-              {assignee && <span className="task-assignee">{assignee.avatar} {assignee.name}</span>}
+              <span className="task-assignee">{getAssigneeName(task.assigneeId)}</span>
               {task.deadline && (
                 <span className={`task-deadline ${isOverdue ? 'overdue' : ''}`}>
                   {new Date(task.deadline).toLocaleDateString('ru-RU')}

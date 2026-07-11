@@ -1,6 +1,5 @@
 import React from 'react';
-import { Cost, Category } from '../../types';
-import { USERS, MONTH_BUDGET, TOTAL_SPENT } from '../../mockData';
+import { Cost, Category } from '../../api/client';
 
 interface CostSummaryProps {
   costs: Cost[];
@@ -17,7 +16,19 @@ const CostSummary: React.FC<CostSummaryProps> = ({ costs, categories, budget }) 
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 4);
 
-  const getCategoryName = (id: string) => categories.find(c => c.id === id)?.name || 'Без категории';
+  const getCategoryName = (id: string) => {
+    const category = categories.find(c => c.id === id);
+    return category?.name || 'Без категории';
+  };
+
+  const getUserName = (id: string) => {
+    const names: Record<string, string> = {
+      u1: 'Алексей',
+      u2: 'Мария',
+      u3: 'Сергей',
+    };
+    return names[id] || id;
+  };
 
   return (
     <div className="cost-summary">
@@ -40,18 +51,15 @@ const CostSummary: React.FC<CostSummaryProps> = ({ costs, categories, budget }) 
       <div className="recent-costs">
         <h4>Последние траты</h4>
         <ul>
-          {recent.map(cost => {
-            const user = USERS[cost.userId as keyof typeof USERS];
-            return (
-              <li key={cost.id} className="cost-item">
-                <span className="cost-category">{getCategoryName(cost.categoryId)}</span>
-                <span className="cost-note">{cost.note || '—'}</span>
-                <span className="cost-user">{user ? user.avatar : '👤'}</span>
-                <span className="cost-amount">{cost.amount.toLocaleString()} ₽</span>
-                <span className="cost-date">{new Date(cost.date).toLocaleDateString('ru-RU')}</span>
-              </li>
-            );
-          })}
+          {recent.map(cost => (
+            <li key={cost.id} className="cost-item">
+              <span className="cost-category">{getCategoryName(cost.categoryId)}</span>
+              <span className="cost-note">{cost.note || '—'}</span>
+              <span className="cost-user">{getUserName(cost.userId)}</span>
+              <span className="cost-amount">{cost.amount.toLocaleString()} ₽</span>
+              <span className="cost-date">{new Date(cost.date).toLocaleDateString('ru-RU')}</span>
+            </li>
+          ))}
         </ul>
       </div>
     </div>

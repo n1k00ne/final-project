@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FaHome, FaTasks, FaMoneyBillWave, FaChartPie, FaUser, FaUsersCog } from 'react-icons/fa';
+import { FaHome, FaTasks, FaMoneyBillWave, FaUser } from 'react-icons/fa'; // убрали FaChartPie и FaUsersCog
 
 interface SidebarProps {
   userRole: 'admin' | 'member';
@@ -22,17 +22,9 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole }) => {
         <NavLink to="/costs" className={({ isActive }) => isActive ? 'active' : ''}>
           <FaMoneyBillWave /> <span>Расходы</span>
         </NavLink>
-        <NavLink to="/statistics" className={({ isActive }) => isActive ? 'active' : ''}>
-          <FaChartPie /> <span>Статистика</span>
-        </NavLink>
         <NavLink to="/profile" className={({ isActive }) => isActive ? 'active' : ''}>
           <FaUser /> <span>Профиль</span>
         </NavLink>
-        {userRole === 'admin' && (
-          <NavLink to="/admin" className={({ isActive }) => isActive ? 'active' : ''}>
-            <FaUsersCog /> <span>Управление семьёй</span>
-          </NavLink>
-        )}
       </nav>
     </aside>
   );
